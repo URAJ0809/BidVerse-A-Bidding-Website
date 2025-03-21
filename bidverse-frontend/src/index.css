@@ -1,0 +1,80 @@
+/* index.css */
+
+/* RESET / BASE STYLES */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background-color: #f0f0f0; /* Light gray background */
+  color: #000;              /* Default black text */
+}
+
+/* OPTIONAL: If you want to remove the default scroll offset for body, keep min-height: 100vh. */
+body {
+  min-height: 100vh;
+}
+
+/* Remove or rename this "Container" if it conflicts with MUI's <Container> component.
+   If you do want a custom container class, rename it to .page-container or something else. */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f9f9f9;
+}
+
+/* LINKS */
+a {
+  color: #646cff;
+  text-decoration: none;
+  font-weight: 500;
+}
+a:hover {
+  color: #535bf2;
+}
+
+/* BUTTONS
+   If you're using MUI's <Button>, you might not need these.
+   But if you want custom default button styles, you can keep them.
+*/
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  color: #fff;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* HEADINGS, etc. */
+h1 {
+  font-size: 2em;
+  line-height: 1.2;
+  margin: 1em 0;
+}
+
+/* LIGHT MODE OVERRIDES (if you want a "prefers-color-scheme" approach) */
+@media (prefers-color-scheme: light) {
+  body {
+    background-color: #ffffff;
+    color: #213547;
+  }
+  button {
+    background-color: #f9f9f9;
+    color: #000;
+  }
+}
