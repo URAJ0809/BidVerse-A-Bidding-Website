@@ -9,33 +9,36 @@ function Login() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  
-  const [error, setError] = useState(null); // <-- For displaying error on the page
+  const [error, setError] = useState(null);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
 
     try {
-      // POST /api/users/login with { email, username, password }
       const response = await axios.post('http://localhost:8080/api/users/login', {
         email,
         username,
         password,
       });
-      
       const userData = response.data;
+
       if (userData) {
         login(userData);
-        navigate('/');
+        // If admin => go to /admin, else => /
+        if (userData.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       } else {
         setError('Invalid credentials or user not found.');
       }
     } catch (err) {
       console.error('Login error:', err);
-      // If the backend returns an error message, you can show it:
       if (err.response && err.response.data) {
         setError(err.response.data);
       } else {
@@ -51,14 +54,11 @@ function Login() {
           <Typography variant="h4" gutterBottom>
             Login
           </Typography>
-
-          {/* Error Message */}
           {error && (
             <Typography color="error" sx={{ mb: 2 }}>
               {error}
             </Typography>
           )}
-
           <Box
             component="form"
             onSubmit={handleSubmit}
@@ -94,7 +94,6 @@ function Login() {
               Forgot Password?
             </Link>
           </Box>
-
           <Box sx={{ mt: 1 }}>
             <Typography variant="body2">
               Don't have an account?{' '}

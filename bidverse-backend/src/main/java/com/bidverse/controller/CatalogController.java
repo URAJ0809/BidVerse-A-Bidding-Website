@@ -1,22 +1,19 @@
 package com.bidverse.controller;
 
-// src/main/java/com/bidverse/controller/CatalogController.java
-
 import com.bidverse.model.Bid;
 import com.bidverse.model.Product;
 import com.bidverse.repository.BidRepository;
 import com.bidverse.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.MediaType;
+
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/catalog")
@@ -29,54 +26,53 @@ public class CatalogController {
     @Autowired
     private BidRepository bidRepository;
 
-    // GET /api/catalog
+    // GET /api/catalog -> returns ALL products
     @GetMapping
     public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
 
-    // GET /api/catalog/{id}
+    // GET /api/catalog/{id} -> get single product
     @GetMapping("/{id}")
     public Product getProduct(@PathVariable Long id) {
         return productRepository.findById(id).orElse(null);
     }
 
+    // GET /api/catalog/{productId}/bids -> fetch bids for a product
     @GetMapping("/{productId}/bids")
     public List<Bid> getBids(@PathVariable Long productId) {
-        // Return all bids for the product, sorted by amount desc if you want:
         return bidRepository.findByProductIdOrderByAmountDesc(productId);
     }
 
-    // POST /api/catalog with multipart data
+    // POST /api/catalog (multipart) -> Add a product w/o ownerId
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Product addProduct(
-            @RequestParam("name") String name,
-            @RequestParam("price") Double price,
-            @RequestParam("description") String description,
-            @RequestParam(value = "image", required = false) MultipartFile imageFile) throws IOException {
+        @RequestParam("name") String name,
+        @RequestParam("price") Double price,
+        @RequestParam("description") String description,
+        @RequestParam(value = "image", required = false) MultipartFile imageFile
+    ) throws IOException {
 
-        // 1. Create a Product entity
         Product product = new Product();
         product.setName(name);
         product.setPrice(price);
         product.setDescription(description);
 
-        // 2. If an image file was uploaded, save it locally
+        // If an image file was uploaded, save it
         if (imageFile != null && !imageFile.isEmpty()) {
-            // e.g., store in "uploads/" folder in your project
             String fileName = System.currentTimeMillis() + "_" + imageFile.getOriginalFilename();
             Path filePath = Paths.get("uploads", fileName);
             Files.createDirectories(filePath.getParent());
             Files.write(filePath, imageFile.getBytes());
 
-            // store the local path in product.imageUrl
             product.setImageUrl("/uploads/" + fileName);
         }
 
-        // 3. Save product in DB
+        // By default, status = "AVAILABLE"
         return productRepository.save(product);
     }
 
+    // POST /api/catalog/{productId}/bids -> place a bid
     @PostMapping("/{productId}/bids")
     public ResponseEntity<?> placeBid(@PathVariable Long productId, @RequestBody Bid bidData) {
         Product product = productRepository.findById(productId).orElse(null);
@@ -88,12 +84,11 @@ public class CatalogController {
         if (!"AVAILABLE".equals(product.getStatus())) {
             return ResponseEntity.badRequest().body("Bidding is closed for this product");
         }
-        // If current time is after endTime, no more bids
         if (product.getEndTime() != null && LocalDateTime.now().isAfter(product.getEndTime())) {
             return ResponseEntity.badRequest().body("Auction ended. No more bids allowed.");
         }
 
-        // existing min increment logic
+        // Enforce min increment
         double highestSoFar = product.getPrice();
         List<Bid> existingBids = bidRepository.findByProductIdOrderByAmountDesc(productId);
         if (!existingBids.isEmpty()) {
@@ -105,46 +100,38 @@ public class CatalogController {
         }
 
         // Save the bid
-        Bid newBid = new Bid();
-        newBid.setUserId(bidData.getUserId());
-        newBid.setProductId(productId);
-        newBid.setAmount(bidData.getAmount());
-        bidRepository.save(newBid);
+        bidData.setProductId(productId);
+        bidRepository.save(bidData);
 
         return ResponseEntity.ok("Bid placed successfully");
     }
 
-    // 2. End Auction: pick highest bid, mark product as SOLD
+    // POST /api/catalog/{productId}/end-auction -> end the auction
     @PostMapping("/{productId}/end-auction")
     public ResponseEntity<?> endAuction(@PathVariable Long productId) {
         Product product = productRepository.findById(productId).orElse(null);
         if (product == null) {
             return ResponseEntity.badRequest().body("Product not found");
         }
-
         if (!"AVAILABLE".equals(product.getStatus())) {
             return ResponseEntity.badRequest().body("Auction already ended or product is sold");
         }
 
-        // find all bids desc
         List<Bid> bids = bidRepository.findByProductIdOrderByAmountDesc(productId);
         if (bids.isEmpty()) {
-            // no bids, mark product as unsold or remain available
             product.setStatus("UNSOLD");
             productRepository.save(product);
             return ResponseEntity.ok("No bids found. Auction ended with no winner.");
         }
 
-        // highest is first
+        // Highest is first
         Bid highest = bids.get(0);
 
-        // mark product as SOLD
         product.setStatus("SOLD");
         productRepository.save(product);
 
-        // If you want to add to cart or store the winning info, do so here
-
+        // Optionally add to cart or store winner info
         return ResponseEntity.ok("Auction ended. Winner userId=" + highest.getUserId()
-                + " at price=" + highest.getAmount());
+            + " at price=" + highest.getAmount());
     }
 }

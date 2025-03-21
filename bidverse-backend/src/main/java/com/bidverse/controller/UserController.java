@@ -19,6 +19,8 @@ public class UserController {
     // POST /api/users/register
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
+        // e.g. user.getRole() might be "admin" or "user"
+
         // 1. Check if email is already in use
         if (userRepository.findByEmail(user.getEmail()) != null) {
             return ResponseEntity.badRequest().body("Email already in use");
@@ -29,8 +31,13 @@ public class UserController {
             return ResponseEntity.badRequest().body("Username already in use");
         }
 
-        // 3. If both are free, save user
+        // If user.role is not set from the frontend, it defaults to "user"
+        // If you only want certain people to be admin, you can override or check logic here
+
+        // 3. Save user
         User saved = userRepository.save(user);
+
+        // Return the newly created user (including role)
         return ResponseEntity.ok(saved);
     }
 
@@ -52,7 +59,7 @@ public class UserController {
             return ResponseEntity.status(401).body("Wrong password");
         }
 
-        // 3. If password matches, success
+        // 3. Return user (including role)
         return ResponseEntity.ok(user);
     }
 

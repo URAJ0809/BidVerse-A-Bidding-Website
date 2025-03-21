@@ -1,6 +1,15 @@
 // src/components/Register.jsx
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, Link, Card, CardContent } from '@mui/material';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Link,
+  Card,
+  CardContent,
+  MenuItem,
+} from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -9,32 +18,42 @@ function Register() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  
-  const [error, setError] = useState(null); // <-- For on-page errors
+  const [role, setRole] = useState('user'); // default to "user"
+  const [error, setError] = useState(null);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+
     try {
+      // Send { email, username, password, role } to backend
       const response = await axios.post('http://localhost:8080/api/users/register', {
         email,
         username,
         password,
+        role,
       });
-
       const userData = response.data;
+
       if (userData) {
+        // store user in context
         login(userData);
-        navigate('/');
+        // if admin => /admin, else => /
+        if (userData.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       } else {
         setError('Registration failed. Please try again.');
       }
     } catch (err) {
       console.error('Register error:', err);
       if (err.response && err.response.data) {
-        setError(err.response.data); 
+        setError(err.response.data);
       } else {
         setError('Registration failed. Please try again.');
       }
@@ -48,14 +67,11 @@ function Register() {
           <Typography variant="h4" gutterBottom>
             Register
           </Typography>
-
-          {/* Error Message */}
           {error && (
             <Typography color="error" sx={{ mb: 2 }}>
               {error}
             </Typography>
           )}
-
           <Box
             component="form"
             onSubmit={handleSubmit}
@@ -81,6 +97,19 @@ function Register() {
               type="password"
               required
             />
+            {/* ROLE DROPDOWN */}
+            <TextField
+              select
+              label="Role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              helperText="Select user or admin"
+              required
+            >
+              <MenuItem value="user">User</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
+            </TextField>
+
             <Button type="submit" variant="contained">
               Register
             </Button>

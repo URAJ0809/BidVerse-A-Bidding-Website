@@ -1,10 +1,10 @@
 package com.bidverse.repository;
 
-// src/main/java/com/bidverse/repository/ProductRepository.java
-
 import com.bidverse.model.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    // You can add custom queries if needed
+    // Return only the products that belong to a specific owner
+    List<Product> findByOwnerId(Long ownerId);
 }

@@ -1,4 +1,4 @@
-// src/components/AddProduct.jsx
+// src/components/admin/AddProduct.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Box, Typography, TextField, Button, Card, CardContent } from '@mui/material';

@@ -12,14 +12,16 @@ import ContactForm from './components/ContactForm';
 import Footer from './components/Footer';
 import Login from './components/Login';
 import Register from './components/Register';
-import CatalogFull from './components/CatalogFull'; // if you have a full catalog
-import Cart from './components/Cart';               // new cart page
+import CatalogFull from './components/CatalogFull';
+import Cart from './components/Cart';
 import ForgotPassword from './components/ForgotPassword';
 import Profile from './components/Profile';
 import ItemDetail from './components/ItemDetail';
-import AddProduct from './components/AddProduct';
+import AddProduct from './components/admin/AddProduct';
 
-
+// Admin pages
+import AdminDashboard from './components/admin/AdminDashboard';
+import ManageBids from './components/admin/ManageBids';
 
 function App() {
   return (
@@ -39,30 +41,31 @@ function App() {
         <Header />
 
         <Routes>
+          {/* Single homepage route */}
           <Route
             path="/"
             element={
               <>
                 <Hero />
-                <Catalog /> 
+                <Catalog />
                 <Supporters />
                 <ContactForm />
                 <Footer />
               </>
             }
           />
-           <Route path="/" element={<Catalog />} />
-           <Route path="/catalog-full" element={<CatalogFull />} />
+
+          <Route path="/catalog-full" element={<CatalogFull />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/catalog/:id" element={<ItemDetail />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/add-product" element={<AddProduct />} />
+          <Route path="/admin/manage-bids" element={<ManageBids />} />
           <Route path="/ContactForm" element={<ContactForm />} />
-          {/* Cart route */}
           <Route path="/cart" element={<Cart />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          
         </Routes>
       </Paper>
     </Router>

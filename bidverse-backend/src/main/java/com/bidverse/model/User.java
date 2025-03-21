@@ -14,15 +14,19 @@ public class User {
     private String email;
     private String password;
 
+    // NEW: role = "admin" or "user"
+    private String role = "user"; // default to "user"
+
     public User() {}
 
     public User(String username, String email, String password) {
         this.username = username;
         this.email = email;
         this.password = password;
+        // role remains 'user' unless changed
     }
 
-    // Getters and setters...
+    // Getters and setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -34,4 +38,7 @@ public class User {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 }
