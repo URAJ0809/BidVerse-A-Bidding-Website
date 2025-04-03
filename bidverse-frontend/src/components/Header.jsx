@@ -8,9 +8,11 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { styled } from '@mui/material/styles';
+import Button from '@mui/material/Button';
 
 // Styled components
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -54,11 +56,20 @@ const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
   },
 }));
 
+const AdminButton = styled(Button)(({ theme }) => ({
+  marginRight: theme.spacing(2),
+  backgroundColor: '#4f46e5',
+  color: 'white',
+  '&:hover': {
+    backgroundColor: '#4338ca',
+  },
+}));
+
 function Header() {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
 
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -87,6 +98,16 @@ function Header() {
         </Logo>
 
         <div>
+          {/* Admin Login Button - Always visible */}
+          <AdminButton
+            component={RouterLink}
+            to="/admin-login"
+            variant="contained"
+            startIcon={<AdminPanelSettingsIcon />}
+          >
+            Admin Login
+          </AdminButton>
+
           {/* Cart Icon */}
           <StyledIconButton
             component={RouterLink}
@@ -95,6 +116,17 @@ function Header() {
           >
             <ShoppingCartIcon />
           </StyledIconButton>
+
+          {/* Admin Panel Icon - Only show for admin users */}
+          {user && isAdmin() && (
+            <StyledIconButton
+              component={RouterLink}
+              to="/admin"
+              sx={{ mr: 1 }}
+            >
+              <AdminPanelSettingsIcon />
+            </StyledIconButton>
+          )}
 
           {/* Three-dot menu */}
           <StyledIconButton
@@ -148,6 +180,17 @@ function Header() {
                 Hello, {user.username}
               </RouterLink>
             </StyledMenuItem>,
+            // Only show admin dashboard link for admin users
+            ...(isAdmin() ? [
+              <StyledMenuItem key="admin" onClick={handleMenuClose}>
+                <RouterLink
+                  to="/admin"
+                  style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}
+                >
+                  Admin Dashboard
+                </RouterLink>
+              </StyledMenuItem>
+            ] : []),
             <StyledMenuItem key="logout" onClick={handleLogout}>
               Logout
             </StyledMenuItem>,

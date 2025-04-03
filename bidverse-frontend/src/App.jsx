@@ -18,6 +18,8 @@ import ForgotPassword from './components/ForgotPassword';
 import Profile from './components/Profile';
 import ItemDetail from './components/ItemDetail';
 import AddProduct from './components/admin/AddProduct';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import AdminLogin from './components/AdminLogin';
 
 // Admin pages
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -41,7 +43,7 @@ function App() {
         <Header />
 
         <Routes>
-          {/* Single homepage route */}
+          {/* Public routes */}
           <Route
             path="/"
             element={
@@ -54,18 +56,41 @@ function App() {
               </>
             }
           />
-
           <Route path="/catalog-full" element={<CatalogFull />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/catalog/:id" element={<ItemDetail />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/add-product" element={<AddProduct />} />
-          <Route path="/admin/manage-bids" element={<ManageBids />} />
           <Route path="/ContactForm" element={<ContactForm />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+
+          {/* Protected Admin routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedAdminRoute>
+                <AdminDashboard />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/add-product"
+            element={
+              <ProtectedAdminRoute>
+                <AddProduct />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/manage-bids"
+            element={
+              <ProtectedAdminRoute>
+                <ManageBids />
+              </ProtectedAdminRoute>
+            }
+          />
         </Routes>
       </Paper>
     </Router>
