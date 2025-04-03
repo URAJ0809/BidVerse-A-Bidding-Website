@@ -14,7 +14,8 @@ public class User {
     private String email;
     private String password;
 
-    // NEW: role = "admin" or "user"
+    // Role can be "admin" or "user"
+    @Column(nullable = false)
     private String role = "user"; // default to "user"
 
     public User() {}
@@ -40,5 +41,8 @@ public class User {
     public void setPassword(String password) { this.password = password; }
 
     public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public void setRole(String role) { 
+        // Ensure role is never null
+        this.role = (role != null && !role.trim().isEmpty()) ? role : "user"; 
+    }
 }
