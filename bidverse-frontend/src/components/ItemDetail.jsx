@@ -18,47 +18,94 @@ function ItemDetail() {
   const [product, setProduct] = useState(null);
   const [bids, setBids] = useState([]);
   const [newBid, setNewBid] = useState('');
-  const [timeLeft, setTimeLeft] = useState(60); // e.g. 60-second demo timer
+  const [timeLeft, setTimeLeft] = useState(() => {
+    // Try to get the stored time from localStorage
+    const storedTime = localStorage.getItem(`auction_timer_${id}`);
+    if (storedTime) {
+      const parsedTime = JSON.parse(storedTime);
+      // If the auction has ended, return 0
+      if (parsedTime.endTime && new Date(parsedTime.endTime) <= new Date()) {
+        return 0;
+      }
+      // Calculate remaining time
+      const remaining = Math.max(0, Math.floor((new Date(parsedTime.endTime) - new Date()) / 1000));
+      return remaining;
+    }
+    return 60; // Default 60-second demo timer
+  });
+  const [auctionEnded, setAuctionEnded] = useState(false);
   const [error, setError] = useState(null);
 
   // Get the logged-in user from AuthContext
-  // e.g. user = { id: 5, username: "john", email: "john@example.com" }
   const { user } = useAuth();
 
   // 1. Fetch product + existing bids on mount
   useEffect(() => {
     // Fetch product details
     axios.get(`http://localhost:8080/api/catalog/${id}`)
-      .then((res) => setProduct(res.data))
+      .then((res) => {
+        setProduct(res.data);
+        // If product has an end time, use that instead of the default timer
+        if (res.data.endTime) {
+          const endTime = new Date(res.data.endTime);
+          const remaining = Math.max(0, Math.floor((endTime - new Date()) / 1000));
+          setTimeLeft(remaining);
+          // Store the end time in localStorage
+          localStorage.setItem(`auction_timer_${id}`, JSON.stringify({
+            endTime: res.data.endTime,
+            remaining
+          }));
+        }
+      })
       .catch((err) => console.error('Fetch product error:', err));
 
-    // Fetch existing bids (if your backend provides /api/catalog/:id/bids)
+    // Fetch existing bids
     axios.get(`http://localhost:8080/api/catalog/${id}/bids`)
       .then((res) => setBids(res.data))
       .catch((err) => console.error('Fetch bids error:', err));
   }, [id]);
 
-  // 2. Timer logic (demo)
+  // 2. Timer logic
   useEffect(() => {
-    if (timeLeft <= 0) {
-      // Auction ended; pick a winner from local state
-      if (bids.length > 0) {
-        // highest = the bid with the greatest amount
-        const highest = bids.reduce((acc, b) => b.amount > acc.amount ? b : acc, bids[0]);
-        if (highest.userId === user?.id) {
-          alert(`You won the product at ₹${highest.amount}!`);
-          // In a real system, call your backend to finalize or add to cart
+    if (timeLeft <= 0 || auctionEnded) {
+      if (!auctionEnded) {
+        setAuctionEnded(true);
+        // Clear the timer from localStorage when it ends
+        localStorage.removeItem(`auction_timer_${id}`);
+        
+        // Auction ended; pick a winner from local state
+        if (bids.length > 0) {
+          const highest = bids.reduce((acc, b) => b.amount > acc.amount ? b : acc, bids[0]);
+          if (highest.userId === user?.id) {
+            alert(`You won the product at ₹${highest.amount}!`);
+          } else {
+            alert(`Auction ended! The highest bidder is user #${highest.userId} at ₹${highest.amount}`);
+          }
         } else {
-          alert(`Auction ended! The highest bidder is user #${highest.userId} at ₹${highest.amount}`);
+          alert('Auction ended with no bids.');
         }
-      } else {
-        alert('Auction ended with no bids.');
       }
       return;
     }
-    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+
+    const timer = setTimeout(() => {
+      setTimeLeft(prev => {
+        const newTime = prev - 1;
+        // Update localStorage with new remaining time
+        const storedData = localStorage.getItem(`auction_timer_${id}`);
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          localStorage.setItem(`auction_timer_${id}`, JSON.stringify({
+            ...parsedData,
+            remaining: newTime
+          }));
+        }
+        return newTime;
+      });
+    }, 1000);
+
     return () => clearTimeout(timer);
-  }, [timeLeft, bids, user]);
+  }, [timeLeft, bids, user, id, auctionEnded]);
 
   // 3. Place a new bid
   const handlePlaceBid = async () => {
@@ -133,9 +180,16 @@ function ItemDetail() {
           <Typography variant="body1" sx={{ mb: 2 }}>
             Base Price: ₹{product.price}
           </Typography>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Time Left: {timeLeft} seconds
-          </Typography>
+          {!auctionEnded && timeLeft > 0 && (
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Time Left: {timeLeft} seconds
+            </Typography>
+          )}
+          {auctionEnded && (
+            <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+              Auction has ended
+            </Typography>
+          )}
 
           {error && (
             <Typography color="error" sx={{ mb: 2 }}>
