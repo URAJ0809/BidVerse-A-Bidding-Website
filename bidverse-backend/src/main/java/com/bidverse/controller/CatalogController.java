@@ -85,7 +85,24 @@ public class CatalogController {
             return ResponseEntity.badRequest().body("Bidding is closed for this product");
         }
         if (product.getEndTime() != null && LocalDateTime.now().isAfter(product.getEndTime())) {
-            return ResponseEntity.badRequest().body("Auction ended. No more bids allowed.");
+            // Auction has ended, clear all bids and update product status
+            List<Bid> existingBids = bidRepository.findByProductIdOrderByAmountDesc(productId);
+            if (!existingBids.isEmpty()) {
+                // Get the highest bid
+                Bid highestBid = existingBids.get(0);
+                // Clear all bids
+                bidRepository.deleteAll(existingBids);
+                // Update product status
+                product.setStatus("SOLD");
+                productRepository.save(product);
+                return ResponseEntity.ok("Auction ended. Winner userId=" + highestBid.getUserId() 
+                    + " at price=" + highestBid.getAmount());
+            } else {
+                // No bids were placed
+                product.setStatus("UNSOLD");
+                productRepository.save(product);
+                return ResponseEntity.ok("Auction ended with no bids.");
+            }
         }
 
         // Enforce min increment
