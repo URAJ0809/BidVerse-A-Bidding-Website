@@ -14,6 +14,7 @@ import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/catalog")
@@ -29,7 +30,11 @@ public class CatalogController {
     // GET /api/catalog -> returns ALL products
     @GetMapping
     public List<Product> getAllProducts() {
-        return productRepository.findAll();
+        List<Product> allProducts = productRepository.findAll();
+        // Filter out sold items
+        return allProducts.stream()
+            .filter(product -> "AVAILABLE".equals(product.getStatus()))
+            .collect(Collectors.toList());
     }
 
     // GET /api/catalog/{id} -> get single product
