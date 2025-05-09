@@ -126,7 +126,9 @@ function Catalog() {
   useEffect(() => {
     axios.get('http://localhost:8080/api/catalog')
       .then((response) => {
-        setItems(response.data);
+        // Filter out sold items
+        const availableItems = response.data.filter(item => item.status === 'AVAILABLE');
+        setItems(availableItems);
         setLoading(false);
       })
       .catch((error) => {

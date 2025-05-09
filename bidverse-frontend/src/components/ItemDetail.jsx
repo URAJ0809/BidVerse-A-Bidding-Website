@@ -190,6 +190,11 @@ function ItemDetail() {
               Auction has ended
             </Typography>
           )}
+          {product.status === 'SOLD' && (
+            <Typography variant="body2" color="error" sx={{ mb: 2 }}>
+              This item has been sold
+            </Typography>
+          )}
 
           {error && (
             <Typography color="error" sx={{ mb: 2 }}>
@@ -197,18 +202,20 @@ function ItemDetail() {
             </Typography>
           )}
 
-          {/* Bidding form */}
-          <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-            <TextField
-              label="Your Bid"
-              type="number"
-              value={newBid}
-              onChange={(e) => setNewBid(e.target.value)}
-            />
-            <Button variant="contained" onClick={handlePlaceBid}>
-              Place Bid
-            </Button>
-          </Box>
+          {/* Bidding form - only show if item is available */}
+          {product.status === 'AVAILABLE' && !auctionEnded && timeLeft > 0 && (
+            <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
+              <TextField
+                label="Your Bid"
+                type="number"
+                value={newBid}
+                onChange={(e) => setNewBid(e.target.value)}
+              />
+              <Button variant="contained" onClick={handlePlaceBid}>
+                Place Bid
+              </Button>
+            </Box>
+          )}
 
           {/* Bids list */}
           <Typography variant="h6" sx={{ mb: 1 }}>

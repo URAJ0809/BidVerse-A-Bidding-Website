@@ -17,7 +17,9 @@ function AdminDashboard() {
   const fetchMyProducts = async () => {
     try {
       const res = await axios.get(`http://localhost:8080/api/admin/products?userId=${user.id}`);
-      setProducts(res.data);
+      // Filter out sold items
+      const availableProducts = res.data.filter(product => product.status === 'AVAILABLE');
+      setProducts(availableProducts);
     } catch (err) {
       console.error('Error fetching admin products:', err);
     }
