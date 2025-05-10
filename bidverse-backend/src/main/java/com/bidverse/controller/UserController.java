@@ -1,7 +1,9 @@
 package com.bidverse.controller;
 
+import com.bidverse.model.Bid;
 import com.bidverse.model.User;
 import com.bidverse.model.WonItem;
+import com.bidverse.repository.BidRepository;
 import com.bidverse.repository.UserRepository;
 import com.bidverse.repository.WonItemRepository;
 
@@ -22,6 +24,9 @@ public class UserController {
 
     @Autowired
     private WonItemRepository wonItemRepository;
+
+    @Autowired
+    private BidRepository bidRepository;
 
     // POST /api/users/register
     @PostMapping("/register")
@@ -91,5 +96,12 @@ public class UserController {
     public ResponseEntity<?> getWonItems(@PathVariable Long userId) {
         List<WonItem> wonItems = wonItemRepository.findByUserId(userId);
         return ResponseEntity.ok(wonItems); // Always return a list, even if empty
+    }
+
+    // GET /api/users/{userId}/my-bids
+    @GetMapping("/{userId}/my-bids")
+    public ResponseEntity<?> getUserBids(@PathVariable Long userId) {
+        List<Bid> userBids = bidRepository.findByUserId(userId);
+        return ResponseEntity.ok(userBids); // Always return a list, even if empty
     }
 }

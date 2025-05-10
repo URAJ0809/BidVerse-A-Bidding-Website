@@ -36,4 +36,27 @@ public class CartController {
         cartItemRepository.deleteById(cartItemId);
         return ResponseEntity.ok("Item removed from cart");
     }
+
+    @PostMapping("/add-bid-to-cart")
+    public ResponseEntity<?> addBidToCart(@RequestParam Long userId, @RequestParam Long productId, @RequestBody CartItem cartItem) {
+        // Check if the item is already in the cart
+        List<CartItem> existingItems = cartItemRepository.findByUserId(userId);
+        boolean alreadyInCart = existingItems.stream().anyMatch(item -> item.getId().equals(productId));
+
+        if (alreadyInCart) {
+            return ResponseEntity.badRequest().body("Item is already in the cart.");
+        }
+
+        // Add the item to the cart
+        cartItem.setUserId(userId);
+        cartItemRepository.save(cartItem);
+        return ResponseEntity.ok("Item added to cart.");
+    }
+
+    @DeleteMapping("/remove-won-item")
+    public ResponseEntity<?> removeWonItemFromCart(@RequestParam Long productId) {
+        List<CartItem> itemsToRemove = cartItemRepository.findByProductId(productId);
+        cartItemRepository.deleteAll(itemsToRemove);
+        return ResponseEntity.ok("Won item removed from cart.");
+    }
 }
