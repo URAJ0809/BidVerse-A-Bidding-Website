@@ -69,7 +69,7 @@ function Header() {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
 
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin } = useAuth(); // Use isAdmin to check if the user is an admin
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -98,26 +98,30 @@ function Header() {
         </Logo>
 
         <div>
-          {/* Admin Login Button - Always visible */}
-          <AdminButton
-            component={RouterLink}
-            to="/admin-login"
-            variant="contained"
-            startIcon={<AdminPanelSettingsIcon />}
-          >
-            Admin Login
-          </AdminButton>
+          {/* Admin Login Button - Only visible if no user is logged in */}
+          {!user && (
+            <AdminButton
+              component={RouterLink}
+              to="/admin-login"
+              variant="contained"
+              startIcon={<AdminPanelSettingsIcon />}
+            >
+              Admin Login
+            </AdminButton>
+          )}
 
-          {/* Cart Icon */}
-          <StyledIconButton
-            component={RouterLink}
-            to="/cart"
-            sx={{ mr: 1 }}
-          >
-            <ShoppingCartIcon />
-          </StyledIconButton>
+          {/* Cart Icon - Visible for all logged-in users */}
+          {user && (
+            <StyledIconButton
+              component={RouterLink}
+              to="/cart"
+              sx={{ mr: 1 }}
+            >
+              <ShoppingCartIcon />
+            </StyledIconButton>
+          )}
 
-          {/* Admin Panel Icon - Only show for admin users */}
+          {/* Admin Panel Icon - Only visible for admin users */}
           {user && isAdmin() && (
             <StyledIconButton
               component={RouterLink}
@@ -180,17 +184,6 @@ function Header() {
                 Hello, {user.username}
               </RouterLink>
             </StyledMenuItem>,
-            // Only show admin dashboard link for admin users
-            ...(isAdmin() ? [
-              <StyledMenuItem key="admin" onClick={handleMenuClose}>
-                <RouterLink
-                  to="/admin"
-                  style={{ textDecoration: 'none', color: 'inherit', width: '100%' }}
-                >
-                  Admin Dashboard
-                </RouterLink>
-              </StyledMenuItem>
-            ] : []),
             <StyledMenuItem key="logout" onClick={handleLogout}>
               Logout
             </StyledMenuItem>,
