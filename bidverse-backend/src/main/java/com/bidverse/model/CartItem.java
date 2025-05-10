@@ -15,6 +15,7 @@ public class CartItem {
     private String name;   // item name
     private String imageUrl;
     private Double price;
+    private boolean bidded; // New field to indicate if the item is associated with a bid
 
     public CartItem() {}
 
@@ -36,4 +37,12 @@ public class CartItem {
 
     public Double getPrice() { return price; }
     public void setPrice(Double price) { this.price = price; }
+
+    public boolean isBidded() {
+        return bidded;
+    }
+
+    public void setBidded(boolean bidded) {
+        this.bidded = bidded;
+    }
 }

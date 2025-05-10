@@ -4,7 +4,6 @@ import axios from 'axios';
 import {
   Box,
   Typography,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -13,21 +12,30 @@ import {
   TableRow,
   Paper,
   Avatar,
-  Alert
+  Alert,
+  Button // Add this import
 } from '@mui/material';
-import { useAuth } from '../context/AuthContext'; // to get user
+import { useAuth } from '../context/AuthContext';
 
 function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [message, setMessage] = useState(null);
-  const { user } = useAuth(); // e.g. user = { id: 5, username: 'john' }
+  const { user } = useAuth();
 
   // Fetch cart items from DB
   useEffect(() => {
     if (!user) return; // must be logged in
-    axios.get(`http://localhost:8080/api/cart?userId=${user.id}`)
-      .then((res) => setCartItems(res.data))
-      .catch((err) => console.error('Fetch cart error:', err));
+    const fetchCartItems = async () => {
+      try {
+        await axios.delete('http://localhost:8080/api/cart/remove-ended-auctions'); // Remove ended auctions
+        const response = await axios.get(`http://localhost:8080/api/cart?userId=${user.id}`);
+        setCartItems(response.data);
+      } catch (err) {
+        console.error('Error fetching cart items:', err);
+      }
+    };
+
+    fetchCartItems();
   }, [user]);
 
   // Calculate subtotal
@@ -93,13 +101,15 @@ function Cart() {
                     </TableCell>
                     <TableCell>₹{item.price}</TableCell>
                     <TableCell align="right">
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        onClick={() => handleRemove(item.id)}
-                      >
-                        Remove
-                      </Button>
+                      {!item.bidded && ( // Only show the "Remove" button if the item is not associated with a bid
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() => handleRemove(item.id)}
+                        >
+                          Remove
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

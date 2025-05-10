@@ -20,6 +20,7 @@ public class Product {
     private Double price;
     private String imageUrl;
     private String description;
+    private boolean auctionEnded;
 
     // The ID of the admin who created this product (optional)
     private Long ownerId;
@@ -63,4 +64,7 @@ public class Product {
 
     public LocalDateTime getEndTime() { return endTime; }
     public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+
+    public boolean isAuctionEnded() { return auctionEnded; }
+    public void setAuctionEnded(boolean auctionEnded) { this.auctionEnded = auctionEnded; }
 }
