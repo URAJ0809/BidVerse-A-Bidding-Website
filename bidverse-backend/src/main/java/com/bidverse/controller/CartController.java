@@ -101,7 +101,7 @@ public class CartController {
     // Remove items from cart and bids when auction ends
     @DeleteMapping("/remove-ended-auctions")
     public ResponseEntity<?> removeEndedAuctions() {
-        // Fetch all products where the auction has ended
+        // Fetch all products where the auction has ended or the product is sold
         List<Product> endedProducts = productRepository.findByAuctionEnded(true);
 
         for (Product product : endedProducts) {

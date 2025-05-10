@@ -86,7 +86,7 @@ function Cart() {
                     <Avatar
                       variant="rounded"
                       sx={{ width: 56, height: 56, borderRadius: '8px' }}
-                      src={item.imageUrl || '/placeholder.jpg'}
+                      src={item.imageUrl ? `http://localhost:8080${item.imageUrl}` : '/placeholder.jpg'} // Prepend base URL
                       alt={item.name}
                     />
                   </TableCell>
