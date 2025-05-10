@@ -10,7 +10,7 @@ function WonItems() {
 
   useEffect(() => {
     if (!user) return;
-    
+
     const fetchWonItems = async () => {
       try {
         const response = await axios.get(`http://localhost:8080/api/users/${user.id}/won-items`);
@@ -33,11 +33,20 @@ function WonItems() {
   }
 
   if (wonItems.length === 0) {
-    return <Typography>You haven't won any auctions yet.</Typography>;
+    return (
+      <Box sx={{ textAlign: 'center', mt: 4 }}>
+        <Typography variant="h6" color="text.secondary">
+          You haven't won any auctions yet.
+        </Typography>
+      </Box>
+    );
   }
 
   return (
     <Box sx={{ p: 2 }}>
+      <Typography variant="h5" gutterBottom>
+        Your Won Items
+      </Typography>
       <Grid container spacing={2}>
         {wonItems.map((item) => (
           <Grid item xs={12} sm={6} md={4} key={item.id}>

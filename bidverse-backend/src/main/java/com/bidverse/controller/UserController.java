@@ -1,20 +1,27 @@
 package com.bidverse.controller;
 
 import com.bidverse.model.User;
+import com.bidverse.model.WonItem;
 import com.bidverse.repository.UserRepository;
+import com.bidverse.repository.WonItemRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:5173")  // or 3000 if CRA
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})  // or 3000 if CRA
 public class UserController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private WonItemRepository wonItemRepository;
 
     // POST /api/users/register
     @PostMapping("/register")
@@ -77,5 +84,12 @@ public class UserController {
         // 2. Generate a reset token or link (skipped)
         // 3. Possibly send an email with reset instructions (skipped)
         return ResponseEntity.ok("Reset link sent to " + email);
+    }
+
+    // GET /api/users/{userId}/won-items
+    @GetMapping("/{userId}/won-items")
+    public ResponseEntity<?> getWonItems(@PathVariable Long userId) {
+        List<WonItem> wonItems = wonItemRepository.findByUserId(userId);
+        return ResponseEntity.ok(wonItems); // Always return a list, even if empty
     }
 }
