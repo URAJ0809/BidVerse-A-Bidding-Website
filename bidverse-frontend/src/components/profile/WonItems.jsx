@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { Box, Typography, Card, CardContent, CardMedia, Grid } from '@mui/material';
+import { Box, Typography, Card, CardContent, CardMedia, Grid, Button } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 
 function WonItems() {
   const [wonItems, setWonItems] = useState([]);
@@ -72,6 +73,17 @@ function WonItems() {
           </Grid>
         ))}
       </Grid>
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Button
+          variant="contained"
+          color="primary"
+          component={RouterLink}
+          to="/bill-payment"
+          state={{ items: wonItems }} // Pass the won items as state
+        >
+          Proceed to Payment
+        </Button>
+      </Box>
     </Box>
   );
 }

@@ -1,5 +1,5 @@
 // src/components/Cart.jsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -13,7 +13,7 @@ import {
   Paper,
   Avatar,
   Alert,
-  Button // Add this import
+  Button
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,11 +37,6 @@ function Cart() {
 
     fetchCartItems();
   }, [user]);
-
-  // Calculate subtotal
-  const subtotal = useMemo(() => {
-    return cartItems.reduce((sum, item) => sum + item.price, 0);
-  }, [cartItems]);
 
   // Remove item from DB + local state
   const handleRemove = async (cartItemId) => {
@@ -74,65 +69,47 @@ function Cart() {
       {cartItems.length === 0 ? (
         <Typography>Your cart is empty.</Typography>
       ) : (
-        <>
-          <TableContainer component={Paper} sx={{ mb: 3 }}>
-            <Table>
-              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Price</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }} align="right">Action</TableCell>
+        <TableContainer component={Paper} sx={{ mb: 3 }}>
+          <Table>
+            <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold' }}>Item</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Price</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="right">Action</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {cartItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <Avatar
+                      variant="rounded"
+                      sx={{ width: 56, height: 56, borderRadius: '8px' }}
+                      src={item.imageUrl || '/placeholder.jpg'}
+                      alt={item.name}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="subtitle1">{item.name}</Typography>
+                  </TableCell>
+                  <TableCell>₹{item.price}</TableCell>
+                  <TableCell align="right">
+                    {!item.bidded && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => handleRemove(item.id)}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {cartItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <Avatar
-                        variant="rounded"
-                        sx={{ width: 56, height: 56, borderRadius: '8px' }}
-                        src={item.imageUrl || '/placeholder.jpg'}
-                        alt={item.name}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="subtitle1">{item.name}</Typography>
-                    </TableCell>
-                    <TableCell>₹{item.price}</TableCell>
-                    <TableCell align="right">
-                      {!item.bidded && ( // Only show the "Remove" button if the item is not associated with a bid
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          onClick={() => handleRemove(item.id)}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 2
-            }}
-          >
-            <Typography variant="h6">
-              Subtotal: ₹{subtotal.toLocaleString()}
-            </Typography>
-            <Button variant="contained" color="primary" size="large">
-              Proceed to Checkout
-            </Button>
-          </Box>
-        </>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </Box>
   );

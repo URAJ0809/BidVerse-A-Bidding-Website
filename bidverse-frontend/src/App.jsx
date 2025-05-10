@@ -20,6 +20,7 @@ import ItemDetail from './components/ItemDetail';
 import AddProduct from './components/admin/AddProduct';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import AdminLogin from './components/AdminLogin';
+import BillPayment from './components/BillPayment';
 
 // Admin pages
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -65,6 +66,7 @@ function App() {
           <Route path="/ContactForm" element={<ContactForm />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/bill-payment" element={<BillPayment />} />
 
           {/* Protected Admin routes */}
           <Route

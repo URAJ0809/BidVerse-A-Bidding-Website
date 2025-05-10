@@ -104,4 +104,15 @@ public class UserController {
         List<Bid> userBids = bidRepository.findByUserId(userId);
         return ResponseEntity.ok(userBids); // Always return a list, even if empty
     }
+
+    // DELETE /api/users/{userId}/won-items
+    @DeleteMapping("/{userId}/won-items")
+    public ResponseEntity<?> clearWonItems(@PathVariable Long userId) {
+        List<WonItem> wonItems = wonItemRepository.findByUserId(userId);
+        if (wonItems.isEmpty()) {
+            return ResponseEntity.badRequest().body("No won items found for the user.");
+        }
+        wonItemRepository.deleteAll(wonItems);
+        return ResponseEntity.ok("Won items cleared successfully.");
+    }
 }
