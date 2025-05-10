@@ -14,100 +14,80 @@ import { useAuth } from '../context/AuthContext'; // <-- import your AuthContext
 const PLACEHOLDER_IMAGE = '/placeholder.jpg';
 
 function ItemDetail() {
-  const { id } = useParams(); // Product ID from URL
+  const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [bids, setBids] = useState([]);
   const [newBid, setNewBid] = useState('');
-  const [timeLeft, setTimeLeft] = useState(() => {
-    // Try to get the stored time from localStorage
-    const storedTime = localStorage.getItem(`auction_timer_${id}`);
-    if (storedTime) {
-      const parsedTime = JSON.parse(storedTime);
-      // If the auction has ended, return 0
-      if (parsedTime.endTime && new Date(parsedTime.endTime) <= new Date()) {
-        return 0;
-      }
-      // Calculate remaining time
-      const remaining = Math.max(0, Math.floor((new Date(parsedTime.endTime) - new Date()) / 1000));
-      return remaining;
-    }
-    return 60; // Default 60-second demo timer
-  });
+  const [timeLeft, setTimeLeft] = useState(null);
   const [auctionEnded, setAuctionEnded] = useState(false);
   const [error, setError] = useState(null);
-
-  // Get the logged-in user from AuthContext
   const { user } = useAuth();
 
-  // 1. Fetch product + existing bids on mount
+  // Helper function to calculate remaining time
+  const calculateTimeLeft = (endTime) => {
+    const difference = +new Date(endTime) - +new Date();
+    if (difference <= 0) {
+      return { days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 };
+    }
+
+    return {
+      days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((difference / 1000 / 60) % 60),
+      seconds: Math.floor((difference / 1000) % 60),
+      total: difference
+    };
+  };
+
+  // Fetch product and bids
   useEffect(() => {
-    // Fetch product details
     axios.get(`http://localhost:8080/api/catalog/${id}`)
       .then((res) => {
         setProduct(res.data);
-        // If product has an end time, use that instead of the default timer
         if (res.data.endTime) {
-          const endTime = new Date(res.data.endTime);
-          const remaining = Math.max(0, Math.floor((endTime - new Date()) / 1000));
-          setTimeLeft(remaining);
-          // Store the end time in localStorage
-          localStorage.setItem(`auction_timer_${id}`, JSON.stringify({
-            endTime: res.data.endTime,
-            remaining
-          }));
+          const timeRemaining = calculateTimeLeft(res.data.endTime);
+          setTimeLeft(timeRemaining);
+          setAuctionEnded(timeRemaining.total <= 0);
+        } else {
+          setAuctionEnded(true);
         }
       })
       .catch((err) => console.error('Fetch product error:', err));
 
-    // Fetch existing bids
     axios.get(`http://localhost:8080/api/catalog/${id}/bids`)
       .then((res) => setBids(res.data))
       .catch((err) => console.error('Fetch bids error:', err));
   }, [id]);
 
-  // 2. Timer logic
+  // Timer effect
   useEffect(() => {
-    if (timeLeft <= 0 || auctionEnded) {
-      if (!auctionEnded) {
+    if (!product?.endTime || auctionEnded) return;
+
+    const timer = setInterval(() => {
+      const timeRemaining = calculateTimeLeft(product.endTime);
+      setTimeLeft(timeRemaining);
+
+      if (timeRemaining.total <= 0) {
         setAuctionEnded(true);
-        // Clear the timer from localStorage when it ends
-        localStorage.removeItem(`auction_timer_${id}`);
+        clearInterval(timer);
         
-        // Auction ended; pick a winner from local state
+        // Handle auction end
         if (bids.length > 0) {
           const highest = bids.reduce((acc, b) => b.amount > acc.amount ? b : acc, bids[0]);
           if (highest.userId === user?.id) {
-            alert(`You won the product at ₹${highest.amount}!`);
+            alert(`Congratulations! You won the auction for ${product.name} at ₹${highest.amount}!`);
           } else {
-            alert(`Auction ended! The highest bidder is user #${highest.userId} at ₹${highest.amount}`);
+            alert(`Auction ended! The winning bid was ₹${highest.amount} by user #${highest.userId}`);
           }
         } else {
-          alert('Auction ended with no bids.');
+          alert(`Auction ended with no bids for ${product.name}.`);
         }
       }
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setTimeLeft(prev => {
-        const newTime = prev - 1;
-        // Update localStorage with new remaining time
-        const storedData = localStorage.getItem(`auction_timer_${id}`);
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          localStorage.setItem(`auction_timer_${id}`, JSON.stringify({
-            ...parsedData,
-            remaining: newTime
-          }));
-        }
-        return newTime;
-      });
     }, 1000);
 
-    return () => clearTimeout(timer);
-  }, [timeLeft, bids, user, id, auctionEnded]);
+    return () => clearInterval(timer);
+  }, [product, auctionEnded, bids, user]);
 
-  // 3. Place a new bid
   const handlePlaceBid = async () => {
     setError(null);
 
@@ -148,10 +128,23 @@ function ItemDetail() {
     return <Typography>Loading product...</Typography>;
   }
 
-  // Build the image URL
   const imageSrc = product.imageUrl
     ? `http://localhost:8080${product.imageUrl}`
     : PLACEHOLDER_IMAGE;
+
+  // Format time left for display
+  const formatTimeLeft = () => {
+    if (!timeLeft && product.status === 'AVAILABLE') return 'No end time set';
+    if (timeLeft?.total <= 0 || product.status !== 'AVAILABLE') return 'Auction has ended';
+
+    const parts = [];
+    if (timeLeft.days > 0) parts.push(`${timeLeft.days}d`);
+    if (timeLeft.hours > 0) parts.push(`${timeLeft.hours}h`);
+    if (timeLeft.minutes > 0) parts.push(`${timeLeft.minutes}m`);
+    parts.push(`${timeLeft.seconds}s`);
+    
+    return parts.join(' ');
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -163,10 +156,10 @@ function ItemDetail() {
               src={imageSrc}
               alt={product.name}
               style={{
-                width: '400px',       // fixed width
+                width: '400px',
                 height: 'auto',
-                objectFit: 'cover',   // so it won't distort
-                borderRadius: '8px'   // a bit of rounding
+                objectFit: 'cover',
+                borderRadius: '8px'
               }}
             />
           </Box>
@@ -180,21 +173,21 @@ function ItemDetail() {
           <Typography variant="body1" sx={{ mb: 2 }}>
             Base Price: ₹{product.price}
           </Typography>
-          {!auctionEnded && timeLeft > 0 && (
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              Time Left: {timeLeft} seconds
-            </Typography>
-          )}
-          {auctionEnded && (
-            <Typography variant="body2" color="error" sx={{ mb: 2 }}>
-              Auction has ended
-            </Typography>
-          )}
-          {product.status === 'SOLD' && (
-            <Typography variant="body2" color="error" sx={{ mb: 2 }}>
-              This item has been sold
-            </Typography>
-          )}
+          
+          {/* Status and Timer display */}
+          <Typography variant="body1" sx={{ mb: 2, fontWeight: 'bold' }}>
+            Status: {product.status}
+          </Typography>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              mb: 2,
+              color: timeLeft?.total <= 300000 ? 'error.main' : 'text.primary',
+              fontWeight: timeLeft?.total <= 300000 ? 'bold' : 'normal'
+            }}
+          >
+            {product.status === 'AVAILABLE' ? formatTimeLeft() : 'Auction has ended'}
+          </Typography>
 
           {error && (
             <Typography color="error" sx={{ mb: 2 }}>
@@ -202,8 +195,8 @@ function ItemDetail() {
             </Typography>
           )}
 
-          {/* Bidding form - only show if item is available */}
-          {product.status === 'AVAILABLE' && !auctionEnded && timeLeft > 0 && (
+          {/* Bidding form - only show if auction is active */}
+          {product.status === 'AVAILABLE' && !auctionEnded && timeLeft?.total > 0 && (
             <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
               <TextField
                 label="Your Bid"
@@ -234,10 +227,24 @@ function ItemDetail() {
                   py: 1
                 }}
               >
-                {/* If bid.userId == your userId, show "You" */}
-                <Typography>
-                  {bid.userId === user?.id ? 'You' : `User #${bid.userId}`}
-                </Typography>
+                <Box>
+                  <Typography>
+                    {bid.userId === user?.id ? 'You' : `User #${bid.userId}`}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {bid.timestamp ? 
+                      new Date(bid.timestamp).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                      }) 
+                      : 'Time not available'}
+                  </Typography>
+                </Box>
                 <Typography>₹{bid.amount}</Typography>
               </Box>
             ))

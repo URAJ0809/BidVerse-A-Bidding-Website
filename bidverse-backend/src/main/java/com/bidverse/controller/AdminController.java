@@ -1,24 +1,36 @@
 package com.bidverse.controller;
 
-import com.bidverse.model.Product;
-import com.bidverse.repository.ProductRepository;
-import com.bidverse.model.Bid;
-import com.bidverse.repository.BidRepository;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.List; // Added import
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.*;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.List;
+import com.bidverse.model.Bid;
+import com.bidverse.model.Product;
+import com.bidverse.repository.BidRepository;
+import com.bidverse.repository.ProductRepository;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}) // Ensure this includes your admin frontend origin
 public class AdminController {
 
     @Autowired
@@ -42,7 +54,8 @@ public class AdminController {
         @RequestParam("name") String name,
         @RequestParam("price") Double price,
         @RequestParam("description") String description,
-        @RequestParam(value = "image", required = false) MultipartFile imageFile
+        @RequestParam(value = "image", required = false) MultipartFile imageFile,
+        @RequestParam(value = "endTime", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime // Added endTime
     ) throws IOException {
 
         // Build product
@@ -51,7 +64,10 @@ public class AdminController {
         product.setName(name);
         product.setPrice(price);
         product.setDescription(description);
-        product.setStatus("AVAILABLE");
+        product.setStatus("AVAILABLE"); // Default status
+        if (endTime != null && endTime.isAfter(LocalDateTime.now())) { // Ensure endTime is in the future
+            product.setEndTime(endTime);
+        }
 
         // If an image was uploaded, store it
         if (imageFile != null && !imageFile.isEmpty()) {
@@ -67,12 +83,17 @@ public class AdminController {
         return ResponseEntity.ok(saved);
     }
 
-    // Example: re-list product
+    // Modified: Re-list product, ensuring ownership
     @PutMapping("/products/{id}/relist")
-    public Product relistProduct(@PathVariable Long id, @RequestBody Product newData) {
+    public ResponseEntity<?> relistProduct(@RequestParam Long userId, @PathVariable Long id, @RequestBody Product newData) {
         Product product = productRepository.findById(id).orElse(null);
         if (product == null) {
-            throw new RuntimeException("Product not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found with ID: " + id);
+        }
+
+        // Check ownership
+        if (product.getOwnerId() == null || !product.getOwnerId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: You do not own this product.");
         }
 
         // Delete old bids
@@ -83,9 +104,85 @@ public class AdminController {
 
         // Set product as AVAILABLE again
         product.setStatus("AVAILABLE");
-        // Update endTime from newData if needed
-        product.setEndTime(newData.getEndTime());
-        productRepository.save(product);
-        return product;
+        // Update endTime from newData if provided and is in the future
+        if (newData.getEndTime() != null && newData.getEndTime().isAfter(LocalDateTime.now())) {
+            product.setEndTime(newData.getEndTime());
+        } else {
+             // If no valid new end time is provided for relist, clear the old one or set a default
+            product.setEndTime(null); // Or set a default, e.g., now + 7 days
+        }
+        // You might want to update other fields from newData as well, if applicable
+        // e.g., product.setName(newData.getName()); if relisting can change name/price etc.
+        
+        Product updatedProduct = productRepository.save(product);
+        return ResponseEntity.ok(updatedProduct);
+    }
+
+    // New: Get bids for a product owned by the admin
+    @GetMapping("/products/{productId}/bids")
+    public ResponseEntity<?> getBidsForOwnedProduct(@RequestParam Long userId, @PathVariable Long productId) {
+        Product product = productRepository.findById(productId).orElse(null);
+        if (product == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found with ID: " + productId);
+        }
+
+        // Check ownership
+        if (product.getOwnerId() == null || !product.getOwnerId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: You do not own this product.");
+        }
+
+        List<Bid> bids = bidRepository.findByProductIdOrderByAmountDesc(productId);
+        return ResponseEntity.ok(bids);
+    }
+
+    // New: Pause auction for a product owned by the admin
+    @PutMapping("/products/{id}/pause")
+    public ResponseEntity<?> pauseProductAuction(@RequestParam Long userId, @PathVariable Long id) {
+        Product product = productRepository.findById(id).orElse(null);
+        if (product == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found with ID: " + id);
+        }
+        if (product.getOwnerId() == null || !product.getOwnerId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: You do not own this product.");
+        }
+        if (!"AVAILABLE".equals(product.getStatus())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Product is not in AVAILABLE status to be paused. Current status: " + product.getStatus());
+        }
+        product.setStatus("PAUSED");
+        Product updatedProduct = productRepository.save(product);
+        return ResponseEntity.ok(updatedProduct);
+    }
+
+    // New: Resume auction for a product owned by the admin
+    @PutMapping("/products/{id}/resume")
+    public ResponseEntity<?> resumeProductAuction(
+        @RequestParam Long userId,
+        @PathVariable Long id,
+        @RequestParam(value = "newEndTime", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime newEndTime
+    ) {
+        Product product = productRepository.findById(id).orElse(null);
+        if (product == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found with ID: " + id);
+        }
+        if (product.getOwnerId() == null || !product.getOwnerId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: You do not own this product.");
+        }
+        if (!"PAUSED".equals(product.getStatus())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Product is not in PAUSED status to be resumed. Current status: " + product.getStatus());
+        }
+
+        product.setStatus("AVAILABLE");
+        if (newEndTime != null && newEndTime.isAfter(LocalDateTime.now())) {
+            product.setEndTime(newEndTime);
+        } else if (product.getEndTime() == null || product.getEndTime().isBefore(LocalDateTime.now())) {
+            // If no new valid end time is provided and old one is past/null,
+            // auction resumes without a specific end time or frontend should enforce setting one.
+            // For now, we'll clear it if no valid newEndTime is given and old one is invalid.
+            product.setEndTime(null); // Or set a default future time.
+        }
+        // If product.getEndTime() was already set and is in the future, it will continue with that.
+
+        Product updatedProduct = productRepository.save(product);
+        return ResponseEntity.ok(updatedProduct);
     }
 }
