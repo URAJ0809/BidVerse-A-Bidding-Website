@@ -6,24 +6,25 @@ import { Box, Button, Typography, Card, CardContent, Grid } from '@mui/material'
 import { Link as RouterLink } from 'react-router-dom';
 
 function AdminPanel() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth(); // Changed to get isAdmin as well
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdmin()) { // Check if user is admin
       navigate('/'); // Redirect if not admin
     } else {
-      fetchProducts();
+      fetchAdminProducts(); // Renamed function for clarity
     }
-  }, [user, navigate]);
+  }, [user, isAdmin, navigate]); // Added isAdmin to dependency array
 
-  const fetchProducts = async () => {
+  const fetchAdminProducts = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/catalog');
+      // Fetch products owned by the current admin user
+      const response = await axios.get(`http://localhost:8080/api/admin/products?userId=${user.id}`);
       setProducts(response.data);
     } catch (err) {
-      console.error('Error fetching products:', err);
+      console.error('Error fetching admin products:', err);
     }
   };
 
@@ -47,8 +48,11 @@ function AdminPanel() {
             <Card>
               <CardContent>
                 <Typography variant="h6">{product.name}</Typography>
-                <Typography variant="body2">Price: ${product.price}</Typography>
-                <Typography variant="body2">{product.description}</Typography>
+                <Typography variant="body2">Price: ₹{product.price}</Typography> {/* Changed $ to ₹ */}
+                <Typography variant="body2">Status: {product.status}</Typography> {/* Added status */}
+                <Typography variant="body2" sx={{ maxHeight: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {product.description}
+                </Typography>
               </CardContent>
             </Card>
           </Grid>

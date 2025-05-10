@@ -1,24 +1,37 @@
 package com.bidverse.controller;
 
-import com.bidverse.model.Bid;
-import com.bidverse.model.Product;
-import com.bidverse.repository.BidRepository;
-import com.bidverse.repository.ProductRepository;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;  // Add this import
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.*;
-import java.time.LocalDateTime;
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.bidverse.model.Bid;
+import com.bidverse.model.Product;
+import com.bidverse.model.WonItem;
+import com.bidverse.repository.BidRepository;
+import com.bidverse.repository.ProductRepository;
+import com.bidverse.repository.WonItemRepository;
 
 @RestController
 @RequestMapping("/api/catalog")
-@CrossOrigin(origins = "http://localhost:5173") // or 3000
+@CrossOrigin(origins = "http://localhost:5174")
 public class CatalogController {
 
     @Autowired
@@ -129,6 +142,32 @@ public class CatalogController {
     }
 
     // POST /api/catalog/{productId}/end-auction -> end the auction
+    // Add to existing CatalogController class
+    @Autowired
+    private WonItemRepository wonItemRepository;
+    
+    private void handleAuctionEnd(Product product, List<Bid> bids) {
+        if (!bids.isEmpty()) {
+            Bid winningBid = bids.get(0); // Highest bid
+            
+            // Create won item record
+            WonItem wonItem = new WonItem();
+            wonItem.setProductId(product.getId());
+            wonItem.setUserId(winningBid.getUserId());
+            wonItem.setWinningBid(winningBid.getAmount());
+            wonItem.setWonAt(LocalDateTime.now());
+            wonItem.setProductName(product.getName());
+            wonItem.setProductImage(product.getImageUrl());
+            
+            wonItemRepository.save(wonItem);
+        }
+        
+        // Update product status
+        product.setStatus(bids.isEmpty() ? "UNSOLD" : "SOLD");
+        productRepository.save(product);
+    }
+    
+    // Update the existing end-auction endpoint
     @PostMapping("/{productId}/end-auction")
     public ResponseEntity<?> endAuction(@PathVariable Long productId) {
         Product product = productRepository.findById(productId).orElse(null);
@@ -138,22 +177,18 @@ public class CatalogController {
         if (!"AVAILABLE".equals(product.getStatus())) {
             return ResponseEntity.badRequest().body("Auction already ended or product is sold");
         }
-
+    
         List<Bid> bids = bidRepository.findByProductIdOrderByAmountDesc(productId);
-        if (bids.isEmpty()) {
-            product.setStatus("UNSOLD");
-            productRepository.save(product);
-            return ResponseEntity.ok("No bids found. Auction ended with no winner.");
+        handleAuctionEnd(product, bids);
+    
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("status", product.getStatus());
+        if (!bids.isEmpty()) {
+            Bid highest = bids.get(0);
+            response.put("winnerId", highest.getUserId());
+            response.put("winningBid", highest.getAmount());
         }
-
-        // Highest is first
-        Bid highest = bids.get(0);
-
-        product.setStatus("SOLD");
-        productRepository.save(product);
-
-        // Optionally add to cart or store winner info
-        return ResponseEntity.ok("Auction ended. Winner userId=" + highest.getUserId()
-            + " at price=" + highest.getAmount());
+    
+        return ResponseEntity.ok(response);
     }
 }

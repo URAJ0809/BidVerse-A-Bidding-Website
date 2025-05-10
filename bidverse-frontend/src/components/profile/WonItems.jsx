@@ -1,41 +1,68 @@
-// src/components/profile/WonItems.jsx
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Card, CardContent } from '@mui/material';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { Box, Typography, Card, CardContent, CardMedia, Grid } from '@mui/material';
 
 function WonItems() {
   const [wonItems, setWonItems] = useState([]);
+  const [error, setError] = useState(null);
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user) return;
-    // Example: GET /api/users/{userId}/won-items
-    axios.get(`http://localhost:8080/api/users/${user.id}/won-items`)
-      .then(res => setWonItems(res.data))
-      .catch(err => console.error('Fetch won-items error:', err));
+    
+    const fetchWonItems = async () => {
+      try {
+        const response = await axios.get(`http://localhost:8080/api/users/${user.id}/won-items`);
+        setWonItems(response.data);
+      } catch (err) {
+        console.error('Error fetching won items:', err);
+        setError('Failed to load won items');
+      }
+    };
+
+    fetchWonItems();
   }, [user]);
 
   if (!user) {
-    return <Typography>Please log in to see your won items.</Typography>;
+    return <Typography>Please log in to view your won items.</Typography>;
+  }
+
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
   }
 
   if (wonItems.length === 0) {
-    return <Typography>You haven't won any items yet.</Typography>;
+    return <Typography>You haven't won any auctions yet.</Typography>;
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {wonItems.map((item) => (
-        <Card key={item.id}>
-          <CardContent>
-            <Typography variant="h6">{item.itemName}</Typography>
-            <Typography variant="body2">
-              Final Price: ₹{item.finalPrice}
-            </Typography>
-          </CardContent>
-        </Card>
-      ))}
+    <Box sx={{ p: 2 }}>
+      <Grid container spacing={2}>
+        {wonItems.map((item) => (
+          <Grid item xs={12} sm={6} md={4} key={item.id}>
+            <Card>
+              {item.productImage && (
+                <CardMedia
+                  component="img"
+                  height="140"
+                  image={`http://localhost:8080${item.productImage}`}
+                  alt={item.productName}
+                />
+              )}
+              <CardContent>
+                <Typography variant="h6">{item.productName}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Won for: ₹{item.winningBid}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Won on: {new Date(item.wonAt).toLocaleDateString()}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
     </Box>
   );
 }
